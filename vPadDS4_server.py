@@ -1,6 +1,7 @@
 
 
 import time
+import math
 import json
 import uinput
 from nuuJoyLib.Socket.tcpipv4 import server_socket
@@ -52,18 +53,17 @@ if __name__ == '__main__':
         while True:
             client_conn = server.client_accept()
             with client_conn as conn:
-                dpadstack = 0
                 while True:
                     try:
-                        msgsData = server.recv_msgsstrm(conn=conn,timeout=30.0,buff=2048)
+                        msgsData = server.recv_msgsstrm(conn=conn,timeout=30.0,buff=1024)
                         if msgsData:
                             cmnddict = json.loads(msgsData.data)
                             if cmnddict['name'] == 'left_analog':
                                 device.emit(uinput.ABS_X, round(axes_res*cmnddict['x']), syn=False)
-                                device.emit(uinput.ABS_Y, round(axes_res*cmnddict['y']))
+                                device.emit(uinput.ABS_Y, round(-axes_res*cmnddict['y']))
                             elif cmnddict['name'] == 'right_analog':
                                 device.emit(uinput.ABS_Z,  round(axes_res*cmnddict['x']), syn=False)
-                                device.emit(uinput.ABS_RZ, round(axes_res*cmnddict['y']))
+                                device.emit(uinput.ABS_RZ, round(-axes_res*cmnddict['y']))
                             elif cmnddict['name'] == 'button_cross':
                                 device.emit(uinput.BTN_B, int(cmnddict['press']))
                             elif cmnddict['name'] == 'button_circle':
@@ -106,6 +106,10 @@ if __name__ == '__main__':
                                 device.emit(uinput.BTN_TR2, int(cmnddict['press']))
                             elif cmnddict['name'] == 'button_share':
                                 device.emit(uinput.BTN_TL2, int(cmnddict['press']))
+                            elif cmnddict['name'] == 'imu_sensor':
+                                device.emit(uinput.ABS_THROTTLE, round(axes_res*cmnddict['roll']/math.pi), syn=False)
+                                device.emit(uinput.ABS_RUDDER, round(axes_res*cmnddict['pitch']/math.pi), syn=False)
+                                device.emit(uinput.ABS_WHEEL, round(axes_res*cmnddict['yaw']/math.pi))
                         else:
                             break
                     except Exception as err:

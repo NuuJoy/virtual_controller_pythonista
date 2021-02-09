@@ -11,8 +11,7 @@ __version__ = (2021,2,9,'beta')
 
 
 # sudo modprobe uinput, or add 'uinput' to /etc/modules
-# todo: orientation, motion
-# note: not excluded trackpad, l2_analog, r2_analog, button_l3, button_r3 (yet)
+# note: not excluded motion, trackpad, l2_analog, r2_analog, button_l3, button_r3 (yet)
 
 
 axes_res    =  32767

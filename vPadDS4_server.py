@@ -1,116 +1,119 @@
 
 
-import time
-import math
 import json
-import uinput
+import evdev
 from nuuJoyLib.Socket.tcpipv4 import server_socket
 
 
-__version__ = (2021,2,9,'beta')
+__version__ = (2021,2,17,'beta')
 
 
-# sudo modprobe uinput, or add 'uinput' to /etc/modules
-# note: not excluded motion, trackpad, l2_analog, r2_analog, button_l3, button_r3 (yet)
-
-
-axes_res    =  32767
-ds4_mapping =  {'left_analog_x':uinput.ABS_X,
-                'left_analog_y':uinput.ABS_Y,
-                'right_analog_x':uinput.ABS_Z,
-                'right_analog_y':uinput.ABS_RZ,
-                'l2_analog':uinput.ABS_RX,
-                'r2_analog':uinput.ABS_RY,
-                'orientation_roll':uinput.ABS_THROTTLE,
-                'orientation_pitch':uinput.ABS_RUDDER,
-                'orientation_yaw':uinput.ABS_WHEEL,
-                'motion_z':uinput.ABS_DISTANCE,
-                'motion_x':uinput.ABS_TILT_X,
-                'motion_y':uinput.ABS_TILT_Y,
-                'dpad_x':uinput.ABS_HAT0X,
-                'dpad_y':uinput.ABS_HAT0Y,
-                'button_options':uinput.BTN_TR2,
-                'button_ps':uinput.BTN_MODE,
-                'button_share':uinput.BTN_TL2,
-                'button_cross':uinput.BTN_B,
-                'button_circle':uinput.BTN_C,
-                'button_square':uinput.BTN_A,
-                'button_triangle':uinput.BTN_X,
-                'button_l1':uinput.BTN_Y,
-                'button_r1':uinput.BTN_Z,
-                'button_l2':uinput.BTN_TL,
-                'button_r2':uinput.BTN_TR,
-                'button_l3':uinput.BTN_SELECT,
-                'button_r3':uinput.BTN_START,
-                'button_trackpad':uinput.BTN_THUMBL,}
+ds4_events =    {
+                evdev.ecodes.EV_ABS:[
+                                    (evdev.ecodes.ABS_X,evdev.AbsInfo(value=0,min=-32767,max=32767,fuzz=0,flat=0,resolution=0)),
+                                    (evdev.ecodes.ABS_Y,evdev.AbsInfo(value=0,min=-32767,max=32767,fuzz=0,flat=0,resolution=0)),
+                                    (evdev.ecodes.ABS_Z,evdev.AbsInfo(value=-32767,min=-32767,max=32767,fuzz=0,flat=0,resolution=0)),
+                                    (evdev.ecodes.ABS_RX,evdev.AbsInfo(value=0,min=-32767,max=32767,fuzz=0,flat=0,resolution=0)),
+                                    (evdev.ecodes.ABS_RY,evdev.AbsInfo(value=0,min=-32767,max=32767,fuzz=0,flat=0,resolution=0)),
+                                    (evdev.ecodes.ABS_RZ,evdev.AbsInfo(value=-32767,min=-32767,max=32767,fuzz=0,flat=0,resolution=0)),
+                                    (evdev.ecodes.ABS_HAT0X,evdev.AbsInfo(value=0,min=-32767,max=32767,fuzz=0,flat=0,resolution=0)),
+                                    (evdev.ecodes.ABS_HAT0Y,evdev.AbsInfo(value=0,min=-32767,max=32767,fuzz=0,flat=0,resolution=0)),
+                                    ],
+                evdev.ecodes.EV_KEY:[
+                                    evdev.ecodes.BTN_TR2,
+                                    evdev.ecodes.BTN_MODE,
+                                    evdev.ecodes.BTN_TL2,
+                                    evdev.ecodes.BTN_B,
+                                    evdev.ecodes.BTN_C,
+                                    evdev.ecodes.BTN_A,
+                                    evdev.ecodes.BTN_X,
+                                    evdev.ecodes.BTN_Y,
+                                    evdev.ecodes.BTN_Z,
+                                    evdev.ecodes.BTN_TL,
+                                    evdev.ecodes.BTN_TR,
+                                    evdev.ecodes.BTN_SELECT,
+                                    evdev.ecodes.BTN_START,
+                                    evdev.ecodes.BTN_THUMBL,
+                                    ],
+                evdev.ecodes.EV_MSC:[
+                                    evdev.ecodes.MSC_SCAN,
+                                    ],
+                evdev.ecodes.EV_FF:[
+                                    evdev.ecodes.FF_RUMBLE,
+                                    evdev.ecodes.FF_PERIODIC,
+                                    evdev.ecodes.FF_SQUARE,
+                                    evdev.ecodes.FF_TRIANGLE,
+                                    evdev.ecodes.FF_SINE,
+                                    evdev.ecodes.FF_GAIN,
+                                    ],
+                }
 
 
 if __name__ == '__main__':
-    
-    events = [val for val in ds4_mapping.values()]
-    with uinput.Device(events) as device, server_socket() as server:
-        while True:
-            client_conn = server.client_accept()
-            with client_conn as conn:
-                while True:
-                    try:
-                        msgsData = server.recv_msgsstrm(conn=conn,timeout=30.0,buff=1024)
-                        if msgsData:
+        
+    with evdev.UInput(events=ds4_events,
+                    name='Sony Computer Entertainment Wireless Controller',
+                    vendor=0x54c,
+                    product=0x5c4,
+                    version=0x111,
+                    bustype=0x3,
+                    devnode='/dev/uinput',
+                    phys='py-evdev-uinput',
+                    input_props=None) as vPad:
+
+        with server_socket() as server:
+            
+            while True:
+                client_conn = server.client_accept()
+                with client_conn as conn:
+                    msgsData = True
+                    while msgsData:
+                        try:
+                            msgsData = server.recv_msgsstrm(conn=conn,timeout=30.0,buff=1024)
                             cmnddict = json.loads(msgsData.data)
                             if cmnddict['name'] == 'left_analog':
-                                device.emit(uinput.ABS_X, round(axes_res*cmnddict['x']), syn=False)
-                                device.emit(uinput.ABS_Y, round(-axes_res*cmnddict['y']))
+                                vPad.write(evdev.ecodes.EV_ABS, evdev.ecodes.ABS_X,round(32767*cmnddict['x']))
+                                vPad.write(evdev.ecodes.EV_ABS, evdev.ecodes.ABS_Y,round(-32767*cmnddict['y']))
                             elif cmnddict['name'] == 'right_analog':
-                                device.emit(uinput.ABS_Z,  round(axes_res*cmnddict['x']), syn=False)
-                                device.emit(uinput.ABS_RZ, round(-axes_res*cmnddict['y']))
-                            elif cmnddict['name'] == 'button_cross':
-                                device.emit(uinput.BTN_B, int(cmnddict['press']))
-                            elif cmnddict['name'] == 'button_circle':
-                                device.emit(uinput.BTN_C, int(cmnddict['press']))
-                            elif cmnddict['name'] == 'button_square':
-                                device.emit(uinput.BTN_A, int(cmnddict['press']))
-                            elif cmnddict['name'] == 'button_triangle':
-                                device.emit(uinput.BTN_X, int(cmnddict['press']))
-                            elif cmnddict['name'] == 'dpad_y_up':
-                                if cmnddict['press']:
-                                    device.emit(uinput.ABS_HAT0Y, axes_res)
-                                else:
-                                    device.emit(uinput.ABS_HAT0Y, 0)
-                            elif cmnddict['name'] == 'dpad_y_down':
-                                if cmnddict['press']:
-                                    device.emit(uinput.ABS_HAT0Y, -axes_res)
-                                else:
-                                    device.emit(uinput.ABS_HAT0Y, 0)
+                                vPad.write(evdev.ecodes.EV_ABS, evdev.ecodes.ABS_Z,round(32767*cmnddict['x']))
+                                vPad.write(evdev.ecodes.EV_ABS, evdev.ecodes.ABS_RZ,round(-32767*cmnddict['y']))
                             elif cmnddict['name'] == 'dpad_x_left':
-                                if cmnddict['press']:
-                                    device.emit(uinput.ABS_HAT0X, -axes_res)
-                                else:
-                                    device.emit(uinput.ABS_HAT0X, 0)
+                                vPad.write(evdev.ecodes.EV_ABS, evdev.ecodes.ABS_HAT0X,-32767*int(cmnddict['press']))
                             elif cmnddict['name'] == 'dpad_x_right':
-                                if cmnddict['press']:
-                                    device.emit(uinput.ABS_HAT0X,  axes_res)
-                                else:
-                                    device.emit(uinput.ABS_HAT0X, 0)
+                                vPad.write(evdev.ecodes.EV_ABS, evdev.ecodes.ABS_HAT0X,32767*int(cmnddict['press']))
+                            elif cmnddict['name'] == 'dpad_y_up':
+                                vPad.write(evdev.ecodes.EV_ABS, evdev.ecodes.ABS_HAT0Y,-32767*int(cmnddict['press']))
+                            elif cmnddict['name'] == 'dpad_y_down':
+                                vPad.write(evdev.ecodes.EV_ABS, evdev.ecodes.ABS_HAT0Y,32767*int(cmnddict['press']))
+                            elif cmnddict['name'] == 'button_cross':
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_SOUTH,int(cmnddict['press']))
+                            elif cmnddict['name'] == 'button_circle':
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_EAST,int(cmnddict['press']))
+                            elif cmnddict['name'] == 'button_square':
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_WEST,int(cmnddict['press']))
+                            elif cmnddict['name'] == 'button_triangle':
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_NORTH,int(cmnddict['press']))
                             elif cmnddict['name'] == 'button_l1':
-                                device.emit(uinput.BTN_Y, int(cmnddict['press']))
-                            elif cmnddict['name'] == 'button_l2':
-                                device.emit(uinput.BTN_TL, int(cmnddict['press']))
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_TL,int(cmnddict['press']))
                             elif cmnddict['name'] == 'button_r1':
-                                device.emit(uinput.BTN_Z, int(cmnddict['press']))
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_TR,int(cmnddict['press']))
+                            elif cmnddict['name'] == 'button_l2':
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_TL2,int(cmnddict['press']))
                             elif cmnddict['name'] == 'button_r2':
-                                device.emit(uinput.BTN_TR, int(cmnddict['press']))
-                            elif cmnddict['name'] == 'button_ps':
-                                device.emit(uinput.BTN_MODE, int(cmnddict['press']))
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_TR2,int(cmnddict['press']))
+                            elif cmnddict['name'] == 'button_l3':
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_SELECT,int(cmnddict['press']))
+                            elif cmnddict['name'] == 'button_r3':
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_START,int(cmnddict['press']))
+                            elif cmnddict['name'] == 'button_trackpad':
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_THUMBL,int(cmnddict['press']))
                             elif cmnddict['name'] == 'button_option':
-                                device.emit(uinput.BTN_TR2, int(cmnddict['press']))
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_C,int(cmnddict['press']))
+                            elif cmnddict['name'] == 'button_ps':
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_MODE,int(cmnddict['press']))
                             elif cmnddict['name'] == 'button_share':
-                                device.emit(uinput.BTN_TL2, int(cmnddict['press']))
-                            elif cmnddict['name'] == 'imu_sensor':
-                                device.emit(uinput.ABS_THROTTLE, round(axes_res*cmnddict['roll']/math.pi), syn=False)
-                                device.emit(uinput.ABS_RUDDER, round(axes_res*cmnddict['pitch']/math.pi), syn=False)
-                                device.emit(uinput.ABS_WHEEL, round(axes_res*cmnddict['yaw']/math.pi))
-                        else:
+                                vPad.write(evdev.ecodes.EV_KEY, evdev.ecodes.BTN_Z,int(cmnddict['press']))
+                            vPad.syn()
+                        except Exception as err:
                             break
-                    except Exception as err:
-                        break
 

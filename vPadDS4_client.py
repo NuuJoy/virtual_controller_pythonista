@@ -2,17 +2,17 @@
 
 import time
 import json
-from nuuJoyLib.Pythonista.touchpad import touchGamePad
+from nuuJoyLib.Pythonista.touchpad import DS4GamePad
 from nuuJoyLib.Pythonista.sensor import motion_sensor
 from nuuJoyLib.Socket.tcpipv4 import client_socket
 from nuuJoyLib.HWCtrl.acquisition import constantRateAcquisition
 
 
-__version__ = (2021,2,9,'beta')
+__version__ = (2021,2,17,'beta')
 
 
-#server_address = ('172.20.10.9',13666)
-server_address = ('192.168.254.118',13666)
+server_address = ('172.20.10.9',13666)
+#server_address = ('192.168.254.118',13666)
 enable_imu_sensor = True
 
 
@@ -30,8 +30,7 @@ class socketjsonput():
 if __name__ == '__main__':
 
     scktjson = socketjsonput()
-
-    ds4pad = touchGamePad('ds4')
+    ds4pad   = DS4GamePad()
 
     ds4pad.override_extfunc('dpad_y_up','touchbegan_extfunc',scktjson.send_event)
     ds4pad.override_extfunc('dpad_y_up','touchended_extfunc',scktjson.send_event)
@@ -86,7 +85,7 @@ if __name__ == '__main__':
                                                                                     'pitch':sensor.attitude['pitch'],
                                                                                     'yaw':sensor.attitude['yaw']})
                             dataAcqs = constantRateAcquisition(func_list=(emit_attitude,),output_list=(None,),
-                                                            rate_limit=50,stop_event=ds4pad.stop_event)
+                                                               rate_limit=50,stop_event=ds4pad.stop_event)
                             dataAcqs.start_acquiring()
                     time.sleep(1.0)
                 scktjson.client = socketjsonput.fake_client()

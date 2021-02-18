@@ -35,6 +35,17 @@ if __name__ == '__main__':
                       phys='py-evdev-uinput',
                       input_props=None) as vMouse:
 
+        print('device.name   : ',vMouse.name, type(vMouse.name))
+        print('device.vendor : ',vMouse.vendor, type(vMouse.vendor))
+        print('device.product: ',vMouse.product, type(vMouse.product))
+        print('device.version: ',vMouse.version, type(vMouse.version))
+        print('device.bustype: ',vMouse.bustype, type(vMouse.bustype))
+        print('device.phys   : ',vMouse.phys, type(vMouse.phys))
+        print('device.devnode: ',vMouse.devnode, type(vMouse.devnode))
+        print('device.fd     : ',vMouse.fd, type(vMouse.fd))
+        print('device.device : ',vMouse.device, type(vMouse.device))
+        print('-------------------------------')
+
         with server_socket() as server:
             
             while True:

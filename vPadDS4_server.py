@@ -50,7 +50,7 @@ ds4_events =    {
 
 
 if __name__ == '__main__':
-        
+
     with evdev.UInput(events=ds4_events,
                     name='Sony Computer Entertainment Wireless Controller',
                     vendor=0x54c,
@@ -60,6 +60,17 @@ if __name__ == '__main__':
                     devnode='/dev/uinput',
                     phys='py-evdev-uinput',
                     input_props=None) as vPad:
+
+        print('device.name   : ',vPad.name, type(vPad.name))
+        print('device.vendor : ',vPad.vendor, type(vPad.vendor))
+        print('device.product: ',vPad.product, type(vPad.product))
+        print('device.version: ',vPad.version, type(vPad.version))
+        print('device.bustype: ',vPad.bustype, type(vPad.bustype))
+        print('device.phys   : ',vPad.phys, type(vPad.phys))
+        print('device.devnode: ',vPad.devnode, type(vPad.devnode))
+        print('device.fd     : ',vPad.fd, type(vPad.fd))
+        print('device.device : ',vPad.device, type(vPad.device))
+        print('-------------------------------')
 
         with server_socket() as server:
             
